@@ -6,11 +6,10 @@ import math
 import numpy as np
 from tqdm import tqdm
 import time
-
 import warnings
 warnings.simplefilter("ignore")
 
-df2 = pd.read_csv("df_merge.csv", index_col=0)
+df2 = pd.read_csv("df_merge_cl.csv", index_col=0)
 
 df_rate = pd.DataFrame()
 nr = []
@@ -22,6 +21,7 @@ op = list(df2["player_id"].unique())
 s_rate = [1500]*len(op)
 dic = dict(zip(op,s_rate))
 
+#初期レート定義する必要あり
 for i in tqdm(racecode):
 
     race_rate = []
@@ -30,14 +30,19 @@ for i in tqdm(racecode):
     uma_list = list(df_cal["player_id"])
 
     new_rate = [0]*len(uma_list)
-    race_rate = [dic.pop(uma) for uma in uma_list]
+    #新レート追加の引数カウント
+    tc=0
+    try:
+        race_rate = [dic.pop(uma) for uma in uma_list]
+    except KeyError:
+        print(i)
 
     df_cal["rating"] = race_rate
     df_rate = pd.concat([df_rate, df_cal])
 
     #出走頭数分の箱つくる
     res_list = df_cal["place"].tolist()
-    #レートを計算してplayer_idをkeyとし格納
+    #レートを計算して血統登録番号をkeyとし格納
     count = 0
     for a,ra in zip(res_list,race_rate):
         count2 = 0
@@ -62,12 +67,14 @@ for i in tqdm(racecode):
                 Lose = 1-Win
                 Ra_s -= 16*Lose
 
-        #ブライアスコア求めるならここでBS = 1/n*k
         a_rate = ra + Ra_s
         umad = uma_list[count-1]
         new_dic = {umad:a_rate}
         dic.update(new_dic)
-        
+
+        new_rate[tc] = a_rate
+        tc += 1
+        #new_rate.append(a_rate)
     nr.extend(new_rate)
     new_dic = dict(zip(uma_list,new_rate))
     dic.update(new_dic)
@@ -75,5 +82,4 @@ for i in tqdm(racecode):
 df_rate["レース後rating"] = nr
 df_rate["rate変動"] = df_rate["レース後rating"] - df_rate["rating"]
 
-df_sort = df_rate.sort_values(by="rating")
-df_sort.to_csv("df_sort.csv")
+df_rate.to_csv("df_rate.csv")
